@@ -55,7 +55,7 @@
         "DBInstanceClass": {
             "Description": "The database instance type",
             "Type": "String",
-            "Default": "db.t2.small",
+            "Default": "db.t2.micro",
             "AllowedValues": [
                 "db.t1.micro",
                 "db.m1.small",
@@ -111,7 +111,7 @@
         "InstanceType": {
             "Description": "WebServer EC2 instance type",
             "Type": "String",
-            "Default": "t2.medium",
+            "Default": "t2.micro",
             "AllowedValues": [
                 "t1.micro",
                 "t2.nano",
@@ -621,7 +621,7 @@
                 "HealthCheckIntervalSeconds": 10,
                 "HealthCheckTimeoutSeconds": 5,
                 "HealthyThresholdCount": 2,
-                "Port": 80,
+                "Port": 8080,
                 "Protocol": "HTTP",
                 "UnhealthyThresholdCount": 5,
                 "VpcId": {
@@ -693,102 +693,39 @@
         "LaunchConfig": {
             "Type": "AWS::AutoScaling::LaunchConfiguration",
             "Metadata": {
-                "Comment1": "Configure the bootstrap helpers to install the Apache Web Server and PHP",
-                "Comment2": "The website content is downloaded from the CloudFormationPHPSample.zip file",
+                "Comment1": "Configure the bootstrap helpers to install the Java and Tomcat Application Server",
                 "AWS::CloudFormation::Init": {
                     "config": {
                         "packages": {
                             "yum": {
-                                "java-1.6.0-openjdk" : [],
-                                "tomcat" : [],
-                                "httpd" : []
+                                "java-1.8.0-openjdk": [],
+                                "tomcat8": [],
+                                "httpd": []
                             }
                         },
                         "files": {
-                            "/var/www/html/index.php": {
+                            "/home/root/.aws/credentials": {
                                 "content": {
                                     "Fn::Join": [
                                         "",
                                         [
-                                            "<html>\n",
-                                            "  <head>\n",
-                                            "    <title>AWS CloudFormation PHP Sample</title>\n",
-                                            "    <meta http-equiv=\"Content-Type\" content=\"text/html; charset=ISO-8859-1\">\n",
-                                            "  </head>\n",
-                                            "  <body>\n",
-                                            "    <h1>Welcome to the AWS CloudFormation PHP Sample</h1>\n",
-                                            "    <p/>\n",
-                                            "    <?php\n",
-                                            "      // Print out the current data and tie\n",
-                                            "      print \"The Current Date and Time is: <br/>\";\n",
-                                            "      print date(\"g:i A l, F j Y.\");\n",
-                                            "    ?>\n",
-                                            "    <p/>\n",
-                                            "    <?php\n",
-                                            "      // Setup a handle for CURL\n",
-                                            "      $curl_handle=curl_init();\n",
-                                            "      curl_setopt($curl_handle,CURLOPT_CONNECTTIMEOUT,2);\n",
-                                            "      curl_setopt($curl_handle,CURLOPT_RETURNTRANSFER,1);\n",
-                                            "      // Get the hostname of the intance from the instance metadata\n",
-                                            "      curl_setopt($curl_handle,CURLOPT_URL,'http://169.254.169.254/latest/meta-data/public-hostname');\n",
-                                            "      $hostname = curl_exec($curl_handle);\n",
-                                            "      if (empty($hostname))\n",
-                                            "      {\n",
-                                            "        print \"Sorry, for some reason, we got no hostname back <br />\";\n",
-                                            "      }\n",
-                                            "      else\n",
-                                            "      {\n",
-                                            "        print \"Server = \" . $hostname . \"<br />\";\n",
-                                            "      }\n",
-                                            "      // Get the instance-id of the intance from the instance metadata\n",
-                                            "      curl_setopt($curl_handle,CURLOPT_URL,'http://169.254.169.254/latest/meta-data/instance-id');\n",
-                                            "      $instanceid = curl_exec($curl_handle);\n",
-                                            "      if (empty($instanceid))\n",
-                                            "      {\n",
-                                            "        print \"Sorry, for some reason, we got no instance id back <br />\";\n",
-                                            "      }\n",
-                                            "      else\n",
-                                            "      {\n",
-                                            "        print \"EC2 instance-id = \" . $instanceid . \"<br />\";\n",
-                                            "      }\n",
-                                            "      $Database   = \"",
-                                            {
-                                                "Fn::GetAtt": [
-                                                    "MySQLDatabase",
-                                                    "Endpoint.Address"
-                                                ]
-                                            },
-                                            "\";\n",
-                                            "      $DBUser     = \"",
-                                            {
-                                                "Ref": "DBUser"
-                                            },
-                                            "\";\n",
-                                            "      $DBPassword = \"",
-                                            {
-                                                "Ref": "DBPassword"
-                                            },
-                                            "\";\n",
-                                            "      print \"Database = \" . $Database . \"<br />\";\n",
-                                            "      $dbconnection = mysql_connect($Database, $DBUser, $DBPassword)\n",
-                                            "                      or die(\"Could not connect: \" . mysql_error());\n",
-                                            "      print (\"Connected to $Database successfully\");\n",
-                                            "      mysql_close($dbconnection);\n",
-                                            "    ?>\n",
-                                            "    <h2>PHP Information</h2>\n",
-                                            "    <p/>\n",
-                                            "    <?php\n",
-                                            "      phpinfo();\n",
-                                            "    ?>\n",
-                                            "  </body>\n",
-                                            "</html>\n"
+                                            "[default]\n",
+                                            "aws_access_key_id=AKIAIM4Y33AZCA6UDGBA\n",
+                                            "aws_secret_access_key=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\n"
                                         ]
                                     ]
                                 },
                                 "mode": "000600",
-                                "owner": "apache",
-                                "group": "apache"
+                                "owner": "root",
+                                "group": "root"
                             },
+							"/usr/share/tomcat8/webapps/s3api.war" : {
+									"source" : "https://s3.eu-central-1.amazonaws.com/s3apifiles/s3api.war",
+									"mode"   : "000500",
+									"owner"  : "tomcat",
+									"group"  : "tomcat"
+							},
+							
                             "/etc/cfn/cfn-hup.conf": {
                                 "content": {
                                     "Fn::Join": [
@@ -845,14 +782,6 @@
                                 "httpd": {
                                     "enabled": "true",
                                     "ensureRunning": "true"
-                                },
-                                "cfn-hup": {
-                                    "enabled": "true",
-                                    "ensureRunning": "true",
-                                    "files": [
-                                        "/etc/cfn/cfn-hup.conf",
-                                        "/etc/cfn/hooks.d/cfn-auto-reloader.conf"
-                                    ]
                                 }
                             }
                         }
@@ -910,7 +839,29 @@
                                     "Ref": "AWS::Region"
                                 },
                                 "\n",
-                                "# Signal the status from cfn-init\n",
+                                
+								"# Add Tomcat user to sudoers and disable tty\n",
+									"echo \"tomcat ALL=(ALL) NOPASSWD:ALL\" >> /etc/sudoers\n",
+									"echo \"Defaults:%tomcat !requiretty\" >> /etc/sudoers\n",
+									"echo \"Defaults:tomcat !requiretty\" >> /etc/sudoers\n",
+
+								"# Set JVM settings\n",
+									"echo \"JAVA_OPTS='${JAVA_OPTS} -Xms512m -Xmx512m -XX:PermSize=256m -XX:MaxPermSize=512m'\" >> /etc/tomcat6/tomcat6.conf\n",
+
+								"# Tomcat Setup\n",
+									"chown -R tomcat:tomcat /usr/share/tomcat6/\n",
+									"chkconfig tomcat8 on\n",
+									"chkconfig --level 345 tomcat8 on\n",
+
+								"# Configure Apache HTTPD\n",
+									"chkconfig httpd on\n",
+									"chkconfig --level 345 httpd on\n",
+									
+								"# Start servers\n",
+									"service tomcat8 start\n",
+									"/etc/init.d/httpd start\n",
+
+								"# Signal the status from cfn-init\n",
                                 "/opt/aws/bin/cfn-signal -e $? ",
                                 "         --stack ",
                                 {
@@ -931,7 +882,7 @@
         "WebServerSecurityGroup": {
             "Type": "AWS::EC2::SecurityGroup",
             "Properties": {
-                "GroupDescription": "Enable HTTP access via port 80 locked down to the ELB and SSH access",
+                "GroupDescription": "Enable HTTP access via port 80 locked down to the ELB, SSH access and opening port 8080 for Tomcat",
                 "SecurityGroupIngress": [
                     {
                         "IpProtocol": "tcp",
@@ -956,7 +907,13 @@
                         "CidrIp": {
                             "Ref": "SSHLocation"
                         }
-                    }
+                    },
+					{ 
+						"IpProtocol" : "tcp", 
+						"FromPort" : "8080", 
+						"ToPort" : "8080", 
+						"CidrIp" : "0.0.0.0/0" 
+					}
                 ],
                 "VpcId": {
                     "Ref": "VpcId"

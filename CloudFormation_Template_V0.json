@@ -1,6 +1,6 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "AWS CloudFormation Sample Template LAMP_Multi_AZ: Create a highly available, scalable LAMP stack with an Amazon RDS database instance for the backend data store. This template demonstrates using the AWS CloudFormation bootstrap scripts to install the packages and files necessary to deploy the Apache web server and PHP at instance launch time. **WARNING** This template creates one or more Amazon EC2 instances, an Application Load Balancer and an Amazon RDS DB instance. You will be billed for the AWS resources used if you create a stack from this template.",
+    "Description": "AWS CloudFormation Template : Create a highly available, scalable stack with an Amazon RDS database instance for the backend data store. This template demonstrates using the AWS CloudFormation bootstrap scripts to install the packages and files necessary to deploy the Apache web server, Apache Tomcat and Java at instance launch time. **WARNING** This template creates one or more Amazon EC2 instances, an Application Load Balancer and an Amazon RDS DB instance. You will be billed for the AWS resources used if you create a stack from this template.",
     "Parameters": {
         "VpcId": {
             "Type": "AWS::EC2::VPC::Id",
@@ -18,8 +18,8 @@
             "ConstraintDescription": "must be the name of an existing EC2 KeyPair."
         },
         "DBName": {
-            "Default": "myDatabase",
-            "Description": "MySQL database name",
+            "Default": "s3api",
+            "Description": "MySQL database name for S3API application",
             "Type": "String",
             "MinLength": "1",
             "MaxLength": "64",
@@ -28,7 +28,7 @@
         },
         "DBUser": {
             "NoEcho": "true",
-            "Description": "Username for MySQL database access",
+            "Description": "Username for MySQL database access of S3API",
             "Type": "String",
             "MinLength": "1",
             "MaxLength": "16",
@@ -37,7 +37,7 @@
         },
         "DBPassword": {
             "NoEcho": "true",
-            "Description": "Password for MySQL database access",
+            "Description": "Password for MySQL database access of S3API",
             "Type": "String",
             "MinLength": "8",
             "MaxLength": "41",
@@ -111,7 +111,7 @@
         "InstanceType": {
             "Description": "WebServer EC2 instance type",
             "Type": "String",
-            "Default": "t2.small",
+            "Default": "t2.medium",
             "AllowedValues": [
                 "t1.micro",
                 "t2.nano",
@@ -621,7 +621,7 @@
                 "HealthCheckIntervalSeconds": 10,
                 "HealthCheckTimeoutSeconds": 5,
                 "HealthyThresholdCount": 2,
-                "Port": 80,
+                "Port": 8080,
                 "Protocol": "HTTP",
                 "UnhealthyThresholdCount": 5,
                 "VpcId": {
@@ -693,15 +693,14 @@
         "LaunchConfig": {
             "Type": "AWS::AutoScaling::LaunchConfiguration",
             "Metadata": {
-                "Comment1": "Configure the bootstrap helpers to install the Apache Web Server and PHP",
-                "Comment2": "The website content is downloaded from the CloudFormationPHPSample.zip file",
+                "Comment1": "Configure the bootstrap helpers to install the Java and Tomcat Application Server",
                 "AWS::CloudFormation::Init": {
                     "config": {
                         "packages": {
                             "yum": {
-                                "httpd": [],
-                                "php": [],
-                                "php-mysql": []
+                                "java-1.6.0-openjdk": [],
+                                "tomcat": [],
+                                "httpd": []
                             }
                         },
                         "files": {
@@ -931,12 +930,12 @@
         "WebServerSecurityGroup": {
             "Type": "AWS::EC2::SecurityGroup",
             "Properties": {
-                "GroupDescription": "Enable HTTP access via port 80 locked down to the ELB and SSH access",
+                "GroupDescription": "Enable HTTP access via port 8080 locked down to the ELB and SSH access",
                 "SecurityGroupIngress": [
                     {
                         "IpProtocol": "tcp",
-                        "FromPort": "80",
-                        "ToPort": "80",
+                        "FromPort": "8080",
+                        "ToPort": "8080",
                         "SourceSecurityGroupId": {
                             "Fn::Select": [
                                 0,
