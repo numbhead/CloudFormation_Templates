@@ -710,8 +710,8 @@
                                         "",
                                         [
                                             "[default]\n",
-                                            "aws_access_key_id=AKIAIM4Y33AZCA6UDGBA\n",
-                                            "aws_secret_access_key=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\n"
+                                            "aws_access_key_id=<AWS Access Key>\n",
+                                            "aws_secret_access_key=<AWS Secret Access Key>\n"
                                         ]
                                     ]
                                 },
