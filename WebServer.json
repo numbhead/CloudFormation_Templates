@@ -17,89 +17,6 @@
             "Type": "AWS::EC2::KeyPair::KeyName",
             "ConstraintDescription": "must be the name of an existing EC2 KeyPair."
         },
-        "DBName": {
-            "Default": "TestDB",
-            "Description": "MySQL database name",
-            "Type": "String",
-            "MinLength": "1",
-            "MaxLength": "64",
-            "AllowedPattern": "[a-zA-Z][a-zA-Z0-9]*",
-            "ConstraintDescription": "must begin with a letter and contain only alphanumeric characters."
-        },
-        "DBUser": {
-            "NoEcho": "true",
-            "Description": "Username for MySQL database access",
-            "Type": "String",
-            "MinLength": "1",
-            "MaxLength": "16",
-            "AllowedPattern": "[a-zA-Z][a-zA-Z0-9]*",
-            "ConstraintDescription": "must begin with a letter and contain only alphanumeric characters."
-        },
-        "DBPassword": {
-            "NoEcho": "true",
-            "Description": "Password for MySQL database access",
-            "Type": "String",
-            "MinLength": "8",
-            "MaxLength": "41",
-            "AllowedPattern": "[a-zA-Z0-9]*",
-            "ConstraintDescription": "must contain only alphanumeric characters."
-        },
-        "DBAllocatedStorage": {
-            "Default": "5",
-            "Description": "The size of the database (Gb)",
-            "Type": "Number",
-            "MinValue": "5",
-            "MaxValue": "1024",
-            "ConstraintDescription": "must be between 5 and 1024Gb."
-        },
-        "DBInstanceClass": {
-            "Description": "The database instance type",
-            "Type": "String",
-            "Default": "db.t2.micro",
-            "AllowedValues": [
-                "db.t1.micro",
-                "db.m1.small",
-                "db.m1.medium",
-                "db.m1.large",
-                "db.m1.xlarge",
-                "db.m2.xlarge",
-                "db.m2.2xlarge",
-                "db.m2.4xlarge",
-                "db.m3.medium",
-                "db.m3.large",
-                "db.m3.xlarge",
-                "db.m3.2xlarge",
-                "db.m4.large",
-                "db.m4.xlarge",
-                "db.m4.2xlarge",
-                "db.m4.4xlarge",
-                "db.m4.10xlarge",
-                "db.r3.large",
-                "db.r3.xlarge",
-                "db.r3.2xlarge",
-                "db.r3.4xlarge",
-                "db.r3.8xlarge",
-                "db.m2.xlarge",
-                "db.m2.2xlarge",
-                "db.m2.4xlarge",
-                "db.cr1.8xlarge",
-                "db.t2.micro",
-                "db.t2.small",
-                "db.t2.medium",
-                "db.t2.large"
-            ],
-            "ConstraintDescription": "must select a valid database instance type."
-        },
-        "MultiAZDatabase": {
-            "Default": "true",
-            "Description": "Create a Multi-AZ MySQL Amazon RDS database instance",
-            "Type": "String",
-            "AllowedValues": [
-                "true",
-                "false"
-            ],
-            "ConstraintDescription": "must be either true or false."
-        },
         "WebServerCapacity": {
             "Default": "2",
             "Description": "The initial number of WebServer instances",
@@ -698,33 +615,42 @@
                     "config": {
                         "packages": {
                             "yum": {
-                                "java-1.8.0-openjdk": [],
-                                "tomcat8": [],
-                                "httpd": []
+                                "java-1.8.0-openjdk": []
                             }
                         },
                         "files": {
-                            "/home/root/.aws/credentials": {
+                            "/usr/local/tomcat8.tar.gz" : {
+                                "source" : "http://mirrors.fibergrid.in/apache/tomcat/tomcat-8/v8.5.35/bin/apache-tomcat-8.5.35.tar.gz"
+                            },
+                            "/usr/local/ExtractTomcat.sh" : {
                                 "content": {
                                     "Fn::Join": [
-                                        "",
-                                        [
-                                            "[default]\n",
-                                            "aws_access_key_id=<Access Key>\n",
-                                            "aws_secret_access_key=<Access Secret Key>"
+                                        "", [
+                                            "cd /usr/local\n",
+                                            "sudo tar -xvf tomcat8.tar.gz\n",
+                                            "sudo mv apache-tomcat-8.5.35 tomcat8\n",
+                                            "echo \"export CATALINA_HOME=\"/usr/local/tomcat8\"\" >> ~/.bashrc\n",
+                                            "source ~/.bashrc\n"
                                         ]
                                     ]
                                 },
-                                "mode": "000600",
-                                "owner": "root",
-                                "group": "root"
+                                "mode": "000755"
                             },
-														
-                            "/etc/cfn/cfn-hup.conf": {
+                            "/usr/local/StartTomcat.sh" : {
                                 "content": {
                                     "Fn::Join": [
-                                        "",
-                                        [
+                                        "", [
+                                            "sudo /usr/local/tomcat8/bin/startup.sh"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000755"
+                            },
+                            "/etc/cfn/cfn-hup.conf": {
+                                    "content": {
+                                        "Fn::Join": [
+                                            "",
+                                            [
                                             "[main]\n",
                                             "stack=",
                                             {
@@ -769,14 +695,6 @@
                                 "mode": "000400",
                                 "owner": "root",
                                 "group": "root"
-                            }
-                        },
-                        "services": {
-                            "sysvinit": {
-                                "httpd": {
-                                    "enabled": "true",
-                                    "ensureRunning": "true"
-                                }
                             }
                         }
                     }
@@ -833,28 +751,8 @@
                                     "Ref": "AWS::Region"
                                 },
                                 "\n",
-                                
-								"# Add Tomcat user to sudoers and disable tty\n",
-									"echo \"tomcat ALL=(ALL) NOPASSWD:ALL\" >> /etc/sudoers\n",
-									"echo \"Defaults:%tomcat !requiretty\" >> /etc/sudoers\n",
-									"echo \"Defaults:tomcat !requiretty\" >> /etc/sudoers\n",
-
-								"# Set JVM settings\n",
-									"echo \"JAVA_OPTS='${JAVA_OPTS} -Xms512m -Xmx512m -XX:PermSize=256m -XX:MaxPermSize=512m'\" >> /etc/tomcat6/tomcat6.conf\n",
-
-								"# Tomcat Setup\n",
-									"chown -R tomcat:tomcat /usr/share/tomcat6/\n",
-									"chkconfig tomcat8 on\n",
-									"chkconfig --level 345 tomcat8 on\n",
-
-								"# Configure Apache HTTPD\n",
-									"chkconfig httpd on\n",
-									"chkconfig --level 345 httpd on\n",
-									
-								"# Start servers\n",
-									"service tomcat8 start\n",
-									"/etc/init.d/httpd start\n",
-
+                                "/usr/local/ExtractTomcat.sh\n",
+                                "/usr/local/StartTomcat.sh\n",
 								"# Signal the status from cfn-init\n",
                                 "/opt/aws/bin/cfn-signal -e $? ",
                                 "         --stack ",
@@ -918,199 +816,7 @@
                     "id": "7950e251-217e-4b64-b107-f4b4428a8097"
                 }
             }
-        },
-        "DBEC2SecurityGroup": {
-            "Type": "AWS::EC2::SecurityGroup",
-            "Properties": {
-                "GroupDescription": "Open database for access",
-                "SecurityGroupIngress": [
-                    {
-                        "IpProtocol": "tcp",
-                        "FromPort": "3306",
-                        "ToPort": "3306",
-                        "SourceSecurityGroupId": {
-                            "Ref": "WebServerSecurityGroup"
-                        }
-                    }
-                ],
-                "VpcId": {
-                    "Ref": "VpcId"
-                }
-            },
-            "Metadata": {
-                "AWS::CloudFormation::Designer": {
-                    "id": "71775b75-5321-435d-9d8d-15f9db9d7cdc"
-                }
-            }
-        },
-        "MySQLDatabase": {
-            "Type": "AWS::RDS::DBInstance",
-            "Properties": {
-                "Engine": "MySQL",
-                "DBName": {
-                    "Ref": "DBName"
-                },
-                "MultiAZ": {
-                    "Ref": "MultiAZDatabase"
-                },
-                "MasterUsername": {
-                    "Ref": "DBUser"
-                },
-                "MasterUserPassword": {
-                    "Ref": "DBPassword"
-                },
-                "DBInstanceClass": {
-                    "Ref": "DBInstanceClass"
-                },
-                "AllocatedStorage": {
-                    "Ref": "DBAllocatedStorage"
-                },
-                "VPCSecurityGroups": [
-                    {
-                        "Fn::GetAtt": [
-                            "DBEC2SecurityGroup",
-                            "GroupId"
-                        ]
-                    }
-                ]
-            },
-            "Metadata": {
-                "AWS::CloudFormation::Designer": {
-                    "id": "c3b5a752-7d80-4b5f-bf45-75195a3f0629"
-                }
-            }
-        }
-    },
-    "Outputs": {
-        "WebsiteURL": {
-            "Description": "URL for newly created LAMP stack",
-            "Value": {
-                "Fn::Join": [
-                    "",
-                    [
-                        "http://",
-                        {
-                            "Fn::GetAtt": [
-                                "ApplicationLoadBalancer",
-                                "DNSName"
-                            ]
-                        }
-                    ]
-                ]
-            }
-        }
-    },
-    "Metadata": {
-        "AWS::CloudFormation::Designer": {
-            "205b9230-589a-41cf-ad9e-bbbb3af317f7": {
-                "size": {
-                    "width": 60,
-                    "height": 60
-                },
-                "position": {
-                    "x": 60,
-                    "y": 90
-                },
-                "z": 1,
-                "embeds": []
-            },
-            "373c3c91-836f-43bf-8be6-abbc7997e768": {
-                "size": {
-                    "width": 60,
-                    "height": 60
-                },
-                "position": {
-                    "x": 180,
-                    "y": 90
-                },
-                "z": 1,
-                "embeds": []
-            },
-            "7950e251-217e-4b64-b107-f4b4428a8097": {
-                "size": {
-                    "width": 60,
-                    "height": 60
-                },
-                "position": {
-                    "x": 60,
-                    "y": 210
-                },
-                "z": 1,
-                "embeds": []
-            },
-            "71775b75-5321-435d-9d8d-15f9db9d7cdc": {
-                "size": {
-                    "width": 60,
-                    "height": 60
-                },
-                "position": {
-                    "x": 180,
-                    "y": 210
-                },
-                "z": 1,
-                "embeds": []
-            },
-            "c3b5a752-7d80-4b5f-bf45-75195a3f0629": {
-                "size": {
-                    "width": 60,
-                    "height": 60
-                },
-                "position": {
-                    "x": 300,
-                    "y": 90
-                },
-                "z": 1,
-                "embeds": [],
-                "isassociatedwith": [
-                    "71775b75-5321-435d-9d8d-15f9db9d7cdc"
-                ]
-            },
-            "75cc9eb3-cd6d-4f8e-8b8a-e2e966e79905": {
-                "size": {
-                    "width": 60,
-                    "height": 60
-                },
-                "position": {
-                    "x": 300,
-                    "y": 210
-                },
-                "z": 1,
-                "embeds": [],
-                "isassociatedwith": [
-                    "7950e251-217e-4b64-b107-f4b4428a8097"
-                ]
-            },
-            "a6f2d798-a39d-4a0e-9b00-d920209165ff": {
-                "size": {
-                    "width": 60,
-                    "height": 60
-                },
-                "position": {
-                    "x": 60,
-                    "y": 330
-                },
-                "z": 1,
-                "embeds": [],
-                "isassociatedwith": [
-                    "75cc9eb3-cd6d-4f8e-8b8a-e2e966e79905",
-                    "205b9230-589a-41cf-ad9e-bbbb3af317f7"
-                ]
-            },
-            "d88aead9-287d-42e5-ac6f-5fcecb7a4ddb": {
-                "size": {
-                    "width": 60,
-                    "height": 60
-                },
-                "position": {
-                    "x": 180,
-                    "y": 330
-                },
-                "z": 1,
-                "embeds": [],
-                "isassociatedwith": [
-                    "373c3c91-836f-43bf-8be6-abbc7997e768"
-                ]
-            }
         }
     }
+
 }

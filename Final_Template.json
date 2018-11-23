@@ -1,6 +1,6 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "AWS CloudFormation Template : Create a highly available, scalable stack with an Amazon RDS database instance for the backend data store. This template demonstrates using the AWS CloudFormation bootstrap scripts to install the packages and files necessary to deploy the Apache web server, Apache Tomcat and Java at instance launch time. **WARNING** This template creates one or more Amazon EC2 instances, an Application Load Balancer and an Amazon RDS DB instance. You will be billed for the AWS resources used if you create a stack from this template.",
+    "Description": "AWS CloudFormation Template : Create a highly available, scalable stack with an Amazon RDS database instance for the backend data store. This template demonstrates using the AWS CloudFormation bootstrap scripts to install the packages and files necessary to deploy the Apache Tomcat server and Java at instance launch time. **WARNING** This template creates one or more Amazon EC2 instances, an Application Load Balancer and an Amazon RDS DB instance. You will be billed for the AWS resources used if you create a stack from this template.",
     "Parameters": {
         "VpcId": {
             "Type": "AWS::EC2::VPC::Id",
@@ -18,7 +18,7 @@
             "ConstraintDescription": "must be the name of an existing EC2 KeyPair."
         },
         "DBName": {
-            "Default": "TestDB",
+            "Default": "s3api",
             "Description": "MySQL database name",
             "Type": "String",
             "MinLength": "1",
@@ -180,7 +180,7 @@
             "ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
         }
     },
-    "Mappings": {
+     "Mappings": {
         "AWSInstanceType2Arch": {
             "t1.micro": {
                 "Arch": "HVM64"
@@ -578,7 +578,7 @@
             }
         }
     },
-    "Resources": {
+     "Resources": {
         "ApplicationLoadBalancer": {
             "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
             "Properties": {
@@ -698,33 +698,42 @@
                     "config": {
                         "packages": {
                             "yum": {
-                                "java-1.8.0-openjdk": [],
-                                "tomcat8": [],
-                                "httpd": []
+                                "java-1.8.0-openjdk": []
                             }
                         },
                         "files": {
-                            "/home/root/.aws/credentials": {
+                            "/usr/local/tomcat8.tar.gz" : {
+                                "source" : "http://mirrors.fibergrid.in/apache/tomcat/tomcat-8/v8.5.35/bin/apache-tomcat-8.5.35.tar.gz"
+                            },
+                            "/usr/local/ExtractTomcat.sh" : {
                                 "content": {
                                     "Fn::Join": [
-                                        "",
-                                        [
-                                            "[default]\n",
-                                            "aws_access_key_id=<Access Key>\n",
-                                            "aws_secret_access_key=<Access Secret Key>"
+                                        "", [
+                                            "cd /usr/local\n",
+                                            "sudo tar -xvf tomcat8.tar.gz\n",
+                                            "sudo mv apache-tomcat-8.5.35 tomcat8\n",
+                                            "echo \"export CATALINA_HOME=\"/usr/local/tomcat8\"\" >> ~/.bashrc\n",
+                                            "source ~/.bashrc\n"
                                         ]
                                     ]
                                 },
-                                "mode": "000600",
-                                "owner": "root",
-                                "group": "root"
+                                "mode": "000755"
                             },
-														
-                            "/etc/cfn/cfn-hup.conf": {
+                            "/usr/local/StartTomcat.sh" : {
                                 "content": {
                                     "Fn::Join": [
-                                        "",
-                                        [
+                                        "", [
+                                            "sudo /usr/local/tomcat8/bin/startup.sh"
+                                        ]
+                                    ]
+                                },
+                                "mode": "000755"
+                            },
+                            "/etc/cfn/cfn-hup.conf": {
+                                    "content": {
+                                        "Fn::Join": [
+                                            "",
+                                            [
                                             "[main]\n",
                                             "stack=",
                                             {
@@ -769,14 +778,6 @@
                                 "mode": "000400",
                                 "owner": "root",
                                 "group": "root"
-                            }
-                        },
-                        "services": {
-                            "sysvinit": {
-                                "httpd": {
-                                    "enabled": "true",
-                                    "ensureRunning": "true"
-                                }
                             }
                         }
                     }
@@ -833,28 +834,8 @@
                                     "Ref": "AWS::Region"
                                 },
                                 "\n",
-                                
-								"# Add Tomcat user to sudoers and disable tty\n",
-									"echo \"tomcat ALL=(ALL) NOPASSWD:ALL\" >> /etc/sudoers\n",
-									"echo \"Defaults:%tomcat !requiretty\" >> /etc/sudoers\n",
-									"echo \"Defaults:tomcat !requiretty\" >> /etc/sudoers\n",
-
-								"# Set JVM settings\n",
-									"echo \"JAVA_OPTS='${JAVA_OPTS} -Xms512m -Xmx512m -XX:PermSize=256m -XX:MaxPermSize=512m'\" >> /etc/tomcat6/tomcat6.conf\n",
-
-								"# Tomcat Setup\n",
-									"chown -R tomcat:tomcat /usr/share/tomcat6/\n",
-									"chkconfig tomcat8 on\n",
-									"chkconfig --level 345 tomcat8 on\n",
-
-								"# Configure Apache HTTPD\n",
-									"chkconfig httpd on\n",
-									"chkconfig --level 345 httpd on\n",
-									
-								"# Start servers\n",
-									"service tomcat8 start\n",
-									"/etc/init.d/httpd start\n",
-
+                                "/usr/local/ExtractTomcat.sh\n",
+                                "/usr/local/StartTomcat.sh\n",
 								"# Signal the status from cfn-init\n",
                                 "/opt/aws/bin/cfn-signal -e $? ",
                                 "         --stack ",
@@ -981,9 +962,9 @@
             }
         }
     },
-    "Outputs": {
+     "Outputs": {
         "WebsiteURL": {
-            "Description": "URL for newly created LAMP stack",
+            "Description": "URL for newly created stack | You should be able to see tomcat running",
             "Value": {
                 "Fn::Join": [
                     "",
@@ -1000,7 +981,7 @@
             }
         }
     },
-    "Metadata": {
+       "Metadata": {
         "AWS::CloudFormation::Designer": {
             "205b9230-589a-41cf-ad9e-bbbb3af317f7": {
                 "size": {
